@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sorotrail
+      POSTGRES_PASSWORD: sorotrail
+      POSTGRES_DB: sorotrail
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sorotrail"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  indexer:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      RPC_URL: ${RPC_URL:-https://soroban-testnet.stellar.org}
+      DATABASE_URL: postgres://sorotrail:sorotrail@postgres:5432/sorotrail?sslmode=disable
+      POLL_INTERVAL: ${POLL_INTERVAL:-5s}
+      HTTP_ADDR: ":8080"
+      WATCHED_CONTRACTS: ${WATCHED_CONTRACTS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

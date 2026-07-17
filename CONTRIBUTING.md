@@ -1,0 +1,67 @@
+# Contributing to SoroTrail
+
+Thanks for helping! SoroTrail aims to stay small, idiomatic Go with clear
+seams — most features should slot in behind an existing interface.
+
+## Dev setup
+
+1. Go 1.25+ (any Go ≥ 1.21 works too — the go toolchain auto-downloads the
+   version pinned in go.mod) and Docker.
+2. `docker compose up -d postgres` for a local database.
+3. `make test` for the unit suite; `make test-db` runs everything including
+   the Postgres integration tests (they use `TEST_DATABASE_URL` and skip
+   themselves when it's unset).
+4. `make lint` (install [golangci-lint](https://golangci-lint.run/) locally).
+
+The integration tests truncate the tables they use — point
+`TEST_DATABASE_URL` at a throwaway database, not one with data you care
+about.
+
+## Architecture
+
+```
+cmd/sorotrail        main: wiring + graceful shutdown
+internal/config      env parsing + validation
+internal/rpc         Stellar RPC JSON-RPC client (interface: rpc.Client)
+internal/decode      ScVal → JSON            (interface: decode.Decoder)
+internal/store       Postgres + migrations   (interface: store.Store)
+internal/ingester    polling loop, pagination, backoff
+internal/api         chi HTTP handlers
+```
+
+The ingester and API depend only on the three interfaces, never on concrete
+implementations, so each layer is independently testable and replaceable.
+
+### Extension points
+
+- **Richer ScVal decoding** — implement `decode.Decoder` or extend the switch
+  in `internal/decode/xdr.go` (marked with a `contributors:` comment).
+  Unknown ScVal types intentionally fall back to a lossless
+  `{"unknown": {"type": ..., "base64": ...}}` wrapper instead of erroring, so
+  ingestion never stalls; keep that property.
+- **Per-standard decoders** (SEP-41 token events, etc.) — build on top of the
+  stored JSON or as a decorator around `decode.Decoder`; don't widen the core
+  interface.
+- **New API endpoints** — add routes in `internal/api/server.go`. Keep
+  endpoints read-only unless you also add authentication.
+- **Alternative storage** — implement `store.Store`. The contract is spelled
+  out on the interface; note that `QueryEvents` must return events in
+  ascending ID order for cursor pagination to work.
+- **RPC methods** — add to `rpc.Client` only what the ingester/API actually
+  needs; the client deliberately isn't a full RPC SDK.
+
+## Conventions
+
+- Plain SQL via pgx; no ORM. Schema changes are new numbered migration pairs
+  in `internal/store/migrations/` — never edit an applied migration.
+- `log/slog` for logging; pass loggers explicitly, no globals.
+- Tests use testify. RPC/store behavior is tested through the interfaces with
+  hand-written mocks (see `internal/ingester/mocks_test.go`).
+- Keep functions small and packages focused. When in doubt, match the
+  surrounding code.
+
+## Pull requests
+
+- `go build ./...`, `make test` and `make lint` must pass.
+- Include tests for behavior changes.
+- Update the README's API reference and config table when you touch either.

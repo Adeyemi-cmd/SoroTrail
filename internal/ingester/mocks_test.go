@@ -1,0 +1,121 @@
+package ingester
+
+import (
+	"context"
+	"encoding/json"
+	"sync"
+
+	"github.com/khayleb/sorotrail/internal/rpc"
+	"github.com/khayleb/sorotrail/internal/store"
+)
+
+// mockRPC scripts getEvents responses in order and records the requests it
+// received.
+type mockRPC struct {
+	mu             sync.Mutex
+	health         rpc.Health
+	healthErr      error
+	eventsResps    []rpc.GetEventsResponse
+	eventsErrs     []error
+	eventsRequests []rpc.GetEventsRequest
+}
+
+func (m *mockRPC) GetEvents(_ context.Context, req rpc.GetEventsRequest) (rpc.GetEventsResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.eventsRequests = append(m.eventsRequests, req)
+	i := len(m.eventsRequests) - 1
+	var err error
+	if i < len(m.eventsErrs) {
+		err = m.eventsErrs[i]
+	}
+	var resp rpc.GetEventsResponse
+	if i < len(m.eventsResps) {
+		resp = m.eventsResps[i]
+	}
+	return resp, err
+}
+
+func (m *mockRPC) GetLatestLedger(context.Context) (rpc.LatestLedger, error) {
+	return rpc.LatestLedger{Sequence: m.health.LatestLedger}, nil
+}
+
+func (m *mockRPC) GetHealth(context.Context) (rpc.Health, error) {
+	return m.health, m.healthErr
+}
+
+// mockStore is an in-memory Store.
+type mockStore struct {
+	mu       sync.Mutex
+	events   map[string]store.Event
+	state    *store.IngestionState
+	watched  []string
+	upserted [][]store.Event
+}
+
+func newMockStore() *mockStore {
+	return &mockStore{events: map[string]store.Event{}}
+}
+
+func (m *mockStore) UpsertEvents(_ context.Context, events []store.Event) (int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.upserted = append(m.upserted, events)
+	var inserted int64
+	for _, e := range events {
+		if _, dup := m.events[e.ID]; !dup {
+			m.events[e.ID] = e
+			inserted++
+		}
+	}
+	return inserted, nil
+}
+
+func (m *mockStore) GetEvent(_ context.Context, id string) (store.Event, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	e, ok := m.events[id]
+	if !ok {
+		return store.Event{}, store.ErrNotFound
+	}
+	return e, nil
+}
+
+func (m *mockStore) QueryEvents(context.Context, store.EventFilter) ([]store.Event, string, error) {
+	return nil, "", nil
+}
+
+func (m *mockStore) GetIngestionState(context.Context) (store.IngestionState, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.state == nil {
+		return store.IngestionState{}, store.ErrNotFound
+	}
+	return *m.state, nil
+}
+
+func (m *mockStore) SaveIngestionState(_ context.Context, s store.IngestionState) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.state = &s
+	return nil
+}
+
+func (m *mockStore) ListWatchedContracts(context.Context) ([]string, error) {
+	return m.watched, nil
+}
+
+func (m *mockStore) AddWatchedContract(_ context.Context, id string) error {
+	m.watched = append(m.watched, id)
+	return nil
+}
+
+func (m *mockStore) Stats(context.Context) (store.Stats, error) { return store.Stats{}, nil }
+func (m *mockStore) Ping(context.Context) error                 { return nil }
+
+// passthroughDecoder avoids XDR fixtures in ingester tests.
+type passthroughDecoder struct{}
+
+func (passthroughDecoder) DecodeScVal(string) (json.RawMessage, error) {
+	return json.RawMessage(`"decoded"`), nil
+}

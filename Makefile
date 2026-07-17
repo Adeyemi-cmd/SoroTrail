@@ -1,0 +1,39 @@
+BINARY := bin/sorotrail
+MIGRATIONS := internal/store/migrations
+DATABASE_URL ?= postgres://sorotrail:sorotrail@localhost:5432/sorotrail?sslmode=disable
+
+.PHONY: build run test test-db lint migrate-up migrate-down docker-up docker-down clean
+
+build:
+	go build -o $(BINARY) ./cmd/sorotrail
+
+run: build
+	./$(BINARY)
+
+test:
+	go test ./...
+
+# Run the full test suite including Postgres integration tests.
+# Requires a running Postgres, e.g. `make docker-up` first.
+test-db:
+	TEST_DATABASE_URL=$(DATABASE_URL) go test ./...
+
+lint:
+	golangci-lint run
+
+# Migrations run automatically on startup; these targets are for manual control.
+# Requires the migrate CLI: https://github.com/golang-migrate/migrate
+migrate-up:
+	migrate -path $(MIGRATIONS) -database "$(DATABASE_URL)" up
+
+migrate-down:
+	migrate -path $(MIGRATIONS) -database "$(DATABASE_URL)" down 1
+
+docker-up:
+	docker compose up -d --build
+
+docker-down:
+	docker compose down
+
+clean:
+	rm -rf bin coverage.out
