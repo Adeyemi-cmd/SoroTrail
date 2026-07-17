@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/khayleb/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
 )
 
 func TestEventTopicsValue_JSONPassthrough(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/khayleb/sorotrail/internal/rpc"
-	"github.com/khayleb/sorotrail/internal/store"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/store"
 )
 
 const testContract = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"

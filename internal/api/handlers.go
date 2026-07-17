@@ -11,8 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/khayleb/sorotrail/internal/config"
-	"github.com/khayleb/sorotrail/internal/store"
+	"github.com/khaylebfortune/sorotrail/internal/config"
+	"github.com/khaylebfortune/sorotrail/internal/store"
 )
 
 type errorResponse struct {

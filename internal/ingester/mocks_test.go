@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/khayleb/sorotrail/internal/rpc"
-	"github.com/khayleb/sorotrail/internal/store"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/store"
 )
 
 // mockRPC scripts getEvents responses in order and records the requests it

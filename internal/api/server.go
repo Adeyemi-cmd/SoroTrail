@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/khayleb/sorotrail/internal/rpc"
-	"github.com/khayleb/sorotrail/internal/store"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/store"
 )
 
 // Server holds the API's dependencies.

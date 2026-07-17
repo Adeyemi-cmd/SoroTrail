@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/khayleb/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
 )
 
 // Decoder converts a single base64-encoded XDR ScVal into JSON.

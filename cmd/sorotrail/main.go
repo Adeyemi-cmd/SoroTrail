@@ -16,12 +16,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/khayleb/sorotrail/internal/api"
-	"github.com/khayleb/sorotrail/internal/config"
-	"github.com/khayleb/sorotrail/internal/decode"
-	"github.com/khayleb/sorotrail/internal/ingester"
-	"github.com/khayleb/sorotrail/internal/rpc"
-	"github.com/khayleb/sorotrail/internal/store"
+	"github.com/khaylebfortune/sorotrail/internal/api"
+	"github.com/khaylebfortune/sorotrail/internal/config"
+	"github.com/khaylebfortune/sorotrail/internal/decode"
+	"github.com/khaylebfortune/sorotrail/internal/ingester"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/store"
 )
 
 func main() {

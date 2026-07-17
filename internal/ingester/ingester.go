@@ -10,9 +10,9 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/khayleb/sorotrail/internal/decode"
-	"github.com/khayleb/sorotrail/internal/rpc"
-	"github.com/khayleb/sorotrail/internal/store"
+	"github.com/khaylebfortune/sorotrail/internal/decode"
+	"github.com/khaylebfortune/sorotrail/internal/rpc"
+	"github.com/khaylebfortune/sorotrail/internal/store"
 )
 
 // Options configure an Ingester.
