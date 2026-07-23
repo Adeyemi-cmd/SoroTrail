@@ -341,6 +341,10 @@ func (ing *Ingester) toStoreEvent(re rpc.Event) (store.Event, error) {
 	if err != nil {
 		return store.Event{}, fmt.Errorf("decoding event %s: %w", re.ID, err)
 	}
+	var createdAt time.Time
+	if re.LedgerClosedAt != "" {
+		createdAt, _ = time.Parse(time.RFC3339, re.LedgerClosedAt)
+	}
 	return store.Event{
 		ID:               re.ID,
 		ContractID:       re.ContractID,
@@ -352,6 +356,7 @@ func (ing *Ingester) toStoreEvent(re rpc.Event) (store.Event, error) {
 		InSuccessfulCall: re.InSuccessfulContractCall,
 		Topics:           topics,
 		Value:            value,
+		CreatedAt:        createdAt,
 	}, nil
 }
 
