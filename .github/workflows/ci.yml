@@ -5,9 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# Minimal token scopes; CI only reads repo contents and uploads the lint cache.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:16-alpine
@@ -15,34 +20,64 @@ jobs:
           POSTGRES_USER: sorotrail
           POSTGRES_PASSWORD: sorotrail
           POSTGRES_DB: sorotrail
+        # Map to a non-default host port: ubuntu-latest images have reserved ranges,
+        # and any future pre-installed Postgres on 5432 won't shadow our service.
         ports:
-          - 5432:5432
+          - "5433:5432"
         options: >-
-          --health-cmd "pg_isready -U sorotrail"
+          --health-cmd "pg_isready -U sorotrail -d sorotrail"
           --health-interval 2s
           --health-timeout 2s
-          --health-retries 15
+          --health-retries 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.5.0
         with:
+          # Pin to a concrete version so the CI mirror doesn't pull a future
+          # regression. `go-version-file` reads the go directive from go.mod.
           go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            **/*.go
+          cache: true
       - name: Build
         run: go build ./...
       - name: Vet
         run: go vet ./...
+      - name: Wait for Postgres
+        run: |
+          # Belt-and-braces: even though the `services` block gates on the
+          # healthcheck, give us a clear error if pg_isready still hiccups.
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5433 -U sorotrail -d sorotrail; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres did not become ready in time" >&2
+          exit 1
       - name: Test (with Postgres integration tests)
-        run: go test ./... -count=1
+        run: go test ./... -count=1 -race -timeout=120s
         env:
-          TEST_DATABASE_URL: postgres://sorotrail:sorotrail@localhost:5432/sorotrail?sslmode=disable
+          TEST_DATABASE_URL: postgres://sorotrail:sorotrail@localhost:5433/sorotrail?sslmode=disable
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.5.0
         with:
+          # `golangci-lint-action` re-installs its own Go, but pinning here
+          # keeps cache and toolchain selection deterministic in CI logs.
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v8
+          cache-dependency-path: |
+            go.sum
+            **/*.go
+          cache: true
+      - uses: golangci/golangci-lint-action@v8.0.0
         with:
           version: v2.12.2
+          # Persist the lint cache between runs to avoid re-downloading the
+          # binary and re-analyzing unchanged files.
+          cache: true
